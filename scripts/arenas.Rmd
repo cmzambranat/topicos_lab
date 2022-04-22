@@ -1,0 +1,118 @@
+---
+title: "Hemorrhagic fevers"
+author: "Carlos Zambrana-Torrelio"
+date: '2022-04-22'
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(vroom)
+library(here)
+library(sf)
+library(fasterize)
+```
+
+## Hemorrhagic fevers
+
+Hemorrhagic fevers are caused by RNA viruses within the family Arenaviridae. In 2014 were divided into the genera Mammarenavirus for those with mammalian hosts and Reptarenavirus for those infecting snakes.Infected rodents cannot pass disease onto snakes, and Inclusion body disease (IBD) in captive snakes is not transmissible to humans.
+
+A third genus, Hartmanivirus has also been established including other species that infect snakes. A fourth genus, Antennavirus includes two arenaviruses found in striated frogfish (Antennarius striatus).
+
+Mammarenaviruses can be divided into two serogroups, which differ genetically and by geographical distribution:"Old World Complex" arenas found in the Eastern Hemisphere in places such as Europe, Asia, and Africa and the *New World Complex* founded in the Western Hemisphere, in places such as Argentina, Bolivia, Venezuela, Brazil, and the United States. Lymphocytic choriomeningitis (LCM) virus is the only arenavirus to exist in both areas but is classified as an Old World virus. Old and New World viruses appear to have diverged ~45,000 years ago. The Old World Mammarenaviruses originated ~23.1-1.88 thousand years ago, most likely in Southern Africa while the New World Mammarenaviruses evolved in the Latin America-Caribbean region ~41.4-3.3 thousand years ago.
+
+Let's check VIRION for all the **Arenaviridae**
+
+```{r arenas}
+# Using vromm to (lazy) read VIRION database
+virion = vroom(here("data/Virion.csv.gz"))
+
+virion %>%
+  filter(VirusFamily == "arenaviridae")
+
+```
+
+How many hosts and which orders?
+
+```{r}
+virion %>%
+  filter(VirusFamily == "arenaviridae") %>%
+  select(Host) %>%
+  n_distinct()
+
+virion %>%
+  filter(VirusFamily == "arenaviridae") %>%
+  select(HostOrder) %>%
+  distinct()
+```
+
+[Lophiiformes](https://en.wikipedia.org/wiki/Anglerfish)?? Let's check what happened
+```{r}
+virion %>%
+  filter(VirusFamily == "arenaviridae",
+         HostOrder == 'lophiiformes') %>%
+  select(Host, DetectionMethod)
+```
+
+Which are the genera within Arenaviridae?
+```{r}
+virion %>%
+  filter(VirusFamily == "arenaviridae",) %>%
+  select(VirusGenus) %>%
+  distinct()
+```
+
+Let's revisit Lophiiformes!
+```{r}
+virion %>%
+  filter(VirusFamily == "arenaviridae",
+         HostOrder == 'lophiiformes') %>%
+  select(Host, VirusGenus)
+```
+
+# Mammarenavirus
+How many rodent-virus association are?
+```{r}
+virion %>% filter(VirusGenus == "mammarenavirus",
+         HostOrder == "rodentia",
+         DetectionMethod == "Isolation/Observation") %>%
+  dplyr::select(Host, Virus) %>%
+  distinct() 
+```
+
+How many viruses per host?
+```{r}
+virion %>% filter(VirusGenus == "mammarenavirus",
+         HostOrder == "rodentia",
+         DetectionMethod == "Isolation/Observation") %>%
+  select(Host, Virus) %>%
+  group_by(Host) %>%
+  summarize(nVirus = n_distinct(Virus)) %>%
+  arrange(-nVirus)
+```
+
+How many of these are zoonotic virus?
+```{r}
+virion %>%
+  filter(Host == 'homo sapiens') %>%
+  select(Virus) %>%
+  distinct() %>%
+  pull(Virus) -> zoonoses
+
+virion %>%
+  filter(VirusGenus == "mammarenavirus",
+         HostOrder == "rodentia") %>%
+  filter(Virus %in% zoonoses) %>%
+  select(Virus) %>%
+  distinct() %>%
+  pull(Virus)
+```
+
+
+
+
+
+
